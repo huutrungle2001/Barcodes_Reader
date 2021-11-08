@@ -1,0 +1,13 @@
+gcc bitmap.c -o main
+./main Samples//basic.bmp -d
+./main Samples//basic.bmp
+./main Samples//basic_reversed.bmp -d
+./main Samples//basic_reversed.bmp
+./main Samples//one_row.bmp -d
+./main Samples//one_row.bmp
+./main Samples//basic_parity_error.bmp -d
+./main Samples//basic_parity_error.bmp
+./main Samples//basic_single_col_invalid.bmp -d
+./main Samples//basic_single_col_invalid.bmp
+./main Samples//invalid_barcode.bmp -d
+./main Samples//invalid_barcode.bmp

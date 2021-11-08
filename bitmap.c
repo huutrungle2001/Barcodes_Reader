@@ -245,15 +245,21 @@ void free_bmp(Bmp bmp) {
 }
 
 int bin_to_dec(int bin[]){
-    int check_parity = (bin[1] + bin[2])%2 == bin[3] && (bin[4] + bin[5])%2 == bin[6];
-    if(check_parity)
-        return (int)(bin[1]*pow(2,3) + bin[2]*pow(2, 2) + bin[4]*pow(2, 1) + bin[5]*pow(2, 0))%10;
-    return -1;
+    return (int)(bin[1]*pow(2,3) + bin[2]*pow(2, 2) + bin[4]*pow(2, 1) + bin[5]*pow(2, 0))%10;
 }
 
-int is_reversed(Bmp bmp){
+bool is_valid_parity(int bin[]){
+    return (bin[1] + bin[2])%2 == bin[3] && (bin[4] + bin[5])%2 == bin[6];
+}
+
+bool is_reversed(Bmp bmp){
+    // If the color of the fourth bit is black, the barcode is reverse
     return bmp.pixels[0][3][0] == 0;
 }
+
+// RGB(0,0,0) = black;
+// 0 -> black
+// black -> 1
 
 void get_data_frame(int data_frame[][DFRow][DFCol], Bmp bmp){
     int temp_frame[bmp.height][DFRow*DFCol];
@@ -280,12 +286,46 @@ void get_data_frame(int data_frame[][DFRow][DFCol], Bmp bmp){
     }
 }
 
-int parity_error[DFRow];
+int get_valid_row(int check_parity[][DFRow], int height){
+    for(int i = 0; i < height; i++) {
+        int sum = 0;
+        for(int j = 0; j < DFRow; j++) {
+            sum += check_parity[i][j];
+        }
+        // If there is no parity error, sum will be equal to DFRow
+        if(sum == DFRow) {
+            return i;
+        }
+    }
+
+    // If there is no valid row, return -1;
+    return -1;
+}
+
+void get_invalid_frame(int invalid_frame[DFRow], int check_parity[][DFRow], int height){
+    for(int i = 0; i < DFRow; i++){
+        int sum = 0;
+        for(int j = 0; j < height; j++){
+            sum += check_parity[j][i];
+        }
+        if(sum == 0) {
+            invalid_frame[i] = 1;
+        }else{
+            invalid_frame[i] = 0;
+        }
+    }
+}
 
 int main(int argc, char** argv){
     char *filename = argv[1];
+    if(filename == NULL){
+        printf("No bmp image filename provided.\n");
+        return 0;
+    }
     char *flag = argv[argc - 1];
     Bmp bmp = read_bmp(filename);
+
+    // Check flag
     if(strcmp(flag, "-d") == 0){
         printf("Read file %s\n", filename);
         printf("Width: %d\n", bmp.width);
@@ -293,48 +333,50 @@ int main(int argc, char** argv){
         return 0;
     }
 
+    // Get DataFrame
     int data_frame[bmp.height][DFRow][DFCol];
-
     get_data_frame(data_frame, bmp);
-    // for(int i = 0; i < bmp.height; i++){
-    //     for(int j = 0; j < DFRow; j++) {
-    //         for(int k = 0; k < DFCol; k++){
-    //             printf("%d", data_frame[i][j][k]);
-    //         }
-    //     }
-    //     printf("\n");
-    // }
-    
-    // printf("\n");
 
-    // for(int i = 0; i < bmp.height; i++){
-    //     for(int j = 3; j < bmp.width - 3; j++){
-    //         int temp = bmp.pixels[i][j][0] == 0 ? 1 : 0;
-    //         printf("%d", temp);
-    //     }
-    //     printf("\n");
-    // }
-    int check_error = 0;
-    for(int i = 0; i < bmp.height; i++) {
+    int check_parity[bmp.height][DFRow];
+
+    for(int i = 0; i < bmp.height; i++){
         for(int j = 0; j < DFRow; j++){
-            if(bin_to_dec(data_frame[i][j]) == -1){
-                parity_error[j] = 1;
-                check_error++;
-                break;
-            }
+            check_parity[i][j] = is_valid_parity(data_frame[i][j]);
         }
     }
-    if(check_error != 0){
-        printf("Unable to read frame: ");
-        for(int i = 0; i < DFRow; i++) {
-            if(parity_error[i] == 1){
-                printf("%d ", i + 1);
+
+    int valid_row = get_valid_row(check_parity, bmp.height);
+
+    // If there are no valid row, show all the error columns
+    if(valid_row == -1){
+        int invalid_frame[DFRow];
+        get_invalid_frame(invalid_frame, check_parity, bmp.height);
+        int count_invalid = 0;
+        int list_invalid[DFRow];
+        for(int i = 0; i < DFRow; i++){
+            if(invalid_frame[i] == 1){
+                list_invalid[count_invalid] = i;
+                count_invalid ++;
             }
         }
+        if(count_invalid == 1){
+            printf("Unable to read frame: %d\n", list_invalid[0]);
+        }else{
+            printf("Unable to read frames: ");
+            for(int i = 0; i < count_invalid - 1; i++){
+                printf("%d ", list_invalid[i]);
+            }
+            printf("%d\n", list_invalid[count_invalid - 1]);
+        }
+
         return 0;
     }
 
-    for(int i = 0; i < DFRow; i++) {
-        printf("%d", bin_to_dec(data_frame[0][i]));
-    }
+    // If there is no parity error, show the decoded barcode
+    for(int i = 0; i + 1 < DFRow; i++) 
+    {
+        printf("%d ", bin_to_dec(data_frame[valid_row][i]));
+    }   
+    printf("%d\n", bin_to_dec(data_frame[valid_row][DFRow - 1]));
+
 }

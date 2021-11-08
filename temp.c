@@ -248,6 +248,7 @@ int bin_to_dec(int bin[]){
     return (int)(bin[1]*pow(2,3) + bin[2]*pow(2, 2) + bin[4]*pow(2, 1) + bin[5]*pow(2, 0))%10;
 }
 
+// Pass a frame into the function
 bool is_valid_parity(int bin[]){
     return (bin[1] + bin[2])%2 == bin[3] && (bin[4] + bin[5])%2 == bin[6];
 }
@@ -262,6 +263,10 @@ bool is_reversed(Bmp bmp){
 // black -> 1
 
 void get_data_frame(int data_frame[][DFRow][DFCol], Bmp bmp){
+    // DFRow*DFCol = 96
+    // Temp: 0->96
+    // pixel: 3 -> 99
+    // temp_frame[0][95->0]
     int temp_frame[bmp.height][DFRow*DFCol];
     if(!is_reversed(bmp)){
         for(int i = 0; i < bmp.height; i++){
